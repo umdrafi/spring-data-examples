@@ -18,7 +18,7 @@ package example.springdata.mongodb.people;
 import org.reactivestreams.Publisher;
 import org.springframework.data.mongodb.repository.InfiniteStream;
 import org.springframework.data.mongodb.repository.Query;
-import org.springframework.data.repository.reactive.RxJavaCrudRepository;
+import org.springframework.data.repository.reactive.RxJava1CrudRepository;
 
 import rx.Observable;
 import rx.Single;
@@ -28,7 +28,7 @@ import rx.Single;
  *
  * @author Mark Paluch
  */
-public interface RxJavaPersonRepository extends RxJavaCrudRepository<Person, String> {
+public interface RxJava1PersonRepository extends RxJava1CrudRepository<Person, String> {
 
 	/**
 	 * Inserts the given entity. Assumes the instance to be new to be able to apply insertion optimizations.

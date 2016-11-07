@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package example.springdata.mongodb.people;
+
+package example.springdata.cassandra.people;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -21,50 +22,45 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.mongodb.core.CollectionOptions;
-import org.springframework.data.mongodb.core.ReactiveMongoOperations;
+import org.springframework.data.cassandra.core.ReactiveCassandraOperations;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
+import example.springdata.cassandra.util.RequiresCassandraKeyspace;
+import rx.Completable;
 import rx.Observable;
-import rx.Subscription;
 
 /**
- * Integration test for {@link RxJavaPersonRepository} using RxJava1 types. Note that {@link ReactiveMongoOperations} is
- * only available using Project Reactor types as the native Template API implementation does not come in
- * multiple reactive flavors.
+ * Integration test for {@link RxJava1PersonRepository} using RxJava1 types. Note that
+ * {@link ReactiveCassandraOperations} is only available using Project Reactor types as the native Template API
+ * implementation does not come in multiple reactive flavors.
  *
  * @author Mark Paluch
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest
-public class RxJavaPersonRepositoryIntegrationTest {
+public class RxJava1PersonRepositoryIntegrationTest {
 
-	@Autowired RxJavaPersonRepository repository;
-	@Autowired ReactiveMongoOperations operations;
+	@ClassRule public final static RequiresCassandraKeyspace CASSANDRA_KEYSPACE = RequiresCassandraKeyspace.onLocalhost();
+
+	@Autowired RxJava1PersonRepository repository;
+	@Autowired ReactiveCassandraOperations operations;
 
 	@Before
-	public void setUp() {
+	public void setUp() throws Exception {
 
-		operations.collectionExists(Person.class) //
-				.flatMap(exists -> exists ? operations.dropCollection(Person.class) : Mono.just(exists)) //
-				.flatMap(o -> operations.createCollection(Person.class, new CollectionOptions(1024 * 1024, 100, true))) //
-				.then() //
-				.block();
+		Completable deleteAll = repository.deleteAll();
 
-		repository
-				.save(Observable.just(new Person("Walter", "White"), //
-						new Person("Skyler", "White"), //
-						new Person("Saul", "Goodman"), //
-						new Person("Jesse", "Pinkman"))) //
-				.toBlocking() //
-				.last();
+		Observable<Person> insert = repository.insert(Observable.just(new Person("Walter", "White"), //
+				new Person("Skyler", "White"), //
+				new Person("Saul", "Goodman"), //
+				new Person("Jesse", "Pinkman")));//
 
+		deleteAll.andThen(insert).toBlocking().last();
 	}
 
 	/**
@@ -92,7 +88,8 @@ public class RxJavaPersonRepositoryIntegrationTest {
 	}
 
 	/**
-	 * Note that the all object conversions are performed before the results are printed to the console.
+	 * Result set {@link com.datastax.driver.core.Row}s are converted to entities as they are emitted. Reactive pull and
+	 * prefetch define the amount of fetched records.
 	 */
 	@Test
 	public void shouldPerformConversionBeforeResultProcessing() throws Exception {
@@ -106,32 +103,6 @@ public class RxJavaPersonRepositoryIntegrationTest {
 				.subscribe();
 
 		countDownLatch.await();
-	}
-
-	/**
-	 * A tailable cursor streams data using {@link Flux} as it arrives inside the capped collection.
-	 */
-	@Test
-	public void shouldStreamDataWithTailableCursor() throws Exception {
-
-		Subscription subscription = repository.findWithTailableCursorBy() //
-				.doOnNext(System.out::println) //
-				.doOnCompleted(() -> System.out.println("Complete")) //
-				.doOnTerminate(() -> System.out.println("Terminated")) //
-				.subscribe();
-
-		Thread.sleep(100);
-
-		repository.save(new Person("Tuco", "Salamanca")).subscribe();
-		Thread.sleep(100);
-
-		repository.save(new Person("Mike", "Ehrmantraut")).subscribe();
-		Thread.sleep(100);
-
-		subscription.unsubscribe();
-
-		repository.save(new Person("Gus", "Fring")).subscribe();
-		Thread.sleep(100);
 	}
 
 	/**

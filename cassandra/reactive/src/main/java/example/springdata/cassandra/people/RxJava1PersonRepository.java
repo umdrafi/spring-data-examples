@@ -18,7 +18,7 @@ package example.springdata.cassandra.people;
 
 import org.reactivestreams.Publisher;
 import org.springframework.data.cassandra.repository.Query;
-import org.springframework.data.repository.reactive.RxJavaCrudRepository;
+import org.springframework.data.repository.reactive.RxJava1CrudRepository;
 
 import rx.Observable;
 import rx.Single;
@@ -28,7 +28,7 @@ import rx.Single;
  *
  * @author Mark Paluch
  */
-public interface RxJavaPersonRepository extends RxJavaCrudRepository<Person, String> {
+public interface RxJava1PersonRepository extends RxJava1CrudRepository<Person, String> {
 
 	/**
 	 * Inserts the given entity. Assumes the instance to be new to be able to apply insertion optimizations.
@@ -36,7 +36,7 @@ public interface RxJavaPersonRepository extends RxJavaCrudRepository<Person, Str
 	 * This method overrides
 	 * {@link org.springframework.data.cassandra.repository.ReactiveCassandraRepository#insert(Object)} and adopts
 	 * RxJava's {@link Single} as return type.
-	 * 
+	 *
 	 * @param entity must not be {@literal null}.
 	 * @return the saved entity
 	 */
